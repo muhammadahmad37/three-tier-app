@@ -3,7 +3,7 @@ version: '3.8'
 
 services:
   backend:
-    image : ghcr.io/muhammadahmad37/three-tier-app-backend:latest
+    image : 153844980267.dkr.ecr.eu-north-1.amazonaws.com/three-tier-app-backend
     ports:
       - "5000:5000"
     depends_on:
@@ -22,7 +22,7 @@ services:
       retries: 3
 
   frontend:
-    image : ghcr.io/muhammadahmad37/three-tier-app-frontend:latest
+    image : 153844980267.dkr.ecr.eu-north-1.amazonaws.com/three-tier-app-frontend
     ports:
       - "3000:3000"
     depends_on:
