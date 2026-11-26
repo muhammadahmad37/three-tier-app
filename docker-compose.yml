@@ -5,7 +5,7 @@ services:
   backend:
     image : 153844980267.dkr.ecr.eu-north-1.amazonaws.com/three-tier-app-backend:latest
     ports:
-      - "5000:5000"
+      - "5003:5000"
     depends_on:
       - mongo
     env_file:
@@ -24,7 +24,7 @@ services:
   frontend:
     image : 153844980267.dkr.ecr.eu-north-1.amazonaws.com/three-tier-app-frontend:latest
     ports:
-      - "3000:3000"
+      - "3003:3000"
     depends_on:
       - backend
     env_file:
