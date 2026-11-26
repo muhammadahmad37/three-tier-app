@@ -1,10 +1,9 @@
+
 pipeline {
     agent any
 
     environment {
         DOCKERHUB_CREDENTIALS_ID = 'dockerhub_credentials'
-        IMAGE_TAG = "${BRANCH_NAME}-${BUILD_NUMBER}"
-       DOCKERHUB_USER = 'muhammadahmad07'
     }
 
     stages {
@@ -12,6 +11,12 @@ pipeline {
         stage('Checkout Source') {
             steps {
                 checkout scm
+
+                script {
+                    def branch = env.BRANCH_NAME ?: 'manual'
+                    env.SAFE_BRANCH = branch.replaceAll(/[^A-Za-z0-9_.-]/, '-')
+                    env.IMAGE_TAG = "${env.SAFE_BRANCH}-${env.BUILD_NUMBER}"
+                }
             }
         }
 
@@ -20,17 +25,17 @@ pipeline {
                 withCredentials([
                     usernamePassword(
                         credentialsId: "${DOCKERHUB_CREDENTIALS_ID}",
-                        usernameVariable: 'DOCKERHUB_USER',
-                        passwordVariable: 'DOCKERHUB_PASS'
+                        usernameVariable: 'DH_USER',
+                        passwordVariable: 'DH_PASS'
                     )
                 ]) {
                     script {
-                        env.DOCKERHUB_USER = DOCKERHUB_USER
+                        env.DOCKERHUB_USER = DH_USER
                     }
 
                     sh '''
-                        echo "$DOCKERHUB_PASS" | docker login \
-                            -u "$DOCKERHUB_USER" \
+                        echo "$DH_PASS" | docker login \
+                            -u "$DH_USER" \
                             --password-stdin
                     '''
                 }
@@ -63,10 +68,12 @@ pipeline {
         stage('Prepare .env for Compose') {
             steps {
                 script {
-                    writeFile file: '.env', text: """
-BACKEND_IMAGE=${env.BACKEND_TAG_DH}
+                    writeFile(
+                        file: '.env',
+                        text: """BACKEND_IMAGE=${env.BACKEND_TAG_DH}
 FRONTEND_IMAGE=${env.FRONTEND_TAG_DH}
-""".trim() + "\n"
+"""
+                    )
                 }
             }
         }
@@ -78,11 +85,10 @@ FRONTEND_IMAGE=${env.FRONTEND_TAG_DH}
                     branch 'prod'
                 }
             }
-
             steps {
                 input(
                     message: "Deploy to ${env.BRANCH_NAME} environment?",
-                    ok: "Yes, Deploy"
+                    ok: 'Yes, Deploy'
                 )
             }
         }
@@ -94,12 +100,11 @@ FRONTEND_IMAGE=${env.FRONTEND_TAG_DH}
                     branch 'prod'
                 }
             }
-
             steps {
                 sh '''
-                    docker-compose --env-file .env down
-                    docker-compose --env-file .env pull
-                    docker-compose --env-file .env up -d --remove-orphans
+                    docker compose --env-file .env down
+                    docker compose --env-file .env pull
+                    docker compose --env-file .env up -d --remove-orphans
                 '''
             }
         }
@@ -115,11 +120,11 @@ FRONTEND_IMAGE=${env.FRONTEND_TAG_DH}
 
     post {
         success {
-            echo "SUCCESS: ${env.BRANCH_NAME} environment pipeline completed successfully using Docker Hub images!"
+            echo "SUCCESS: ${env.BRANCH_NAME} pipeline completed successfully!"
         }
 
         failure {
-            echo "FAILURE: Pipeline failed for ${env.BRANCH_NAME}. Check the logs."
+            echo "FAILURE: Pipeline failed. Check Jenkins console output."
         }
 
         always {
